@@ -1,7 +1,4 @@
-  
 记kubernetes证书过期的引发的集群大范围不可用问题,及解决办法
-
-
 
 # **问题:**
 
@@ -9,103 +6,97 @@
 
 ![](file:///C:\Users\ASUS\AppData\Local\Temp\ksohtml28772\wps1.jpg)
 
-apiserver日志报:context deadline exceeded，此时apiserver容器已经退出,平台中大量管理容器启动异常。
-
-
+apiserver日志报  
+:context deadline exceeded，此时apiserver容器已经退出,平台中大量管理容器启动异常。
 
 # **查看证书过期时间:**
 
 首先查看证书有效期:
 
-\[root@kubemaster manifests\]\# openssl x509 -in /etc/kubernetes/pki/apiserver-etcd-client.crt -noout -dates
-
-notBefore=Sep  7 03:38:14 2018 GMT
-
-notAfter=Sep  8 03:38:09 2019 GMT
-
-\[root@kubemaster manifests\]\# openssl x509 -in /etc/kubernetes/pki/ca.crt -noout -dates
-
-notBefore=Sep  7 03:38:12 2018 GMT
-
-notAfter=Sep  4 03:38:12 2028 GMT
+```
+[root@kubemaster manifests]# openssl x509 -in /etc/kubernetes/pki/apiserver-etcd-client.crt -noout -dates
+notBefore=Sep  7 03:38:14 2018 GMT
+notAfter=Sep  8 03:38:09 2019 GMT
+[root@kubemaster manifests]# openssl x509 -in /etc/kubernetes/pki/ca.crt -noout -dates
+notBefore=Sep  7 03:38:12 2018 GMT
+notAfter=Sep  4 03:38:12 2028 GMT
+```
 
 可以发现除了根证书之外，其他证书的有效期都是一年，根证书的有效期为10年,由于二级证书是由根证书签发，所以我们需要把其他所有过期的证书全部替换掉。
 
-
-
 # **备份数据:**
 
-首先备份所有证书数据,目录地址/etc/kubernetes/pki/
+首先备份所有证书数据,目录地址
 
-备份好数据后,将pki目录下的标红文件全部删除，如下:
+```
+/etc/kubernetes/pki/
+```
 
-\[root@kubemaster kubernetes\]\# tree pki
+备份好数据后,将pki目录下的标~~删除文件~~全部删除，如下:
 
-pki
 
-├── apiserver.crt
 
-├── apiserver-etcd-client.crt
+`[root@kubemaster kubernetes]# tree pki`
 
-├── apiserver-etcd-client.key
+`pki`
 
-├── apiserver.key
+~~`├── apiserver.crt`~~
 
-├── apiserver-kubelet-client.crt
+~~`├── apiserver-etcd-client.crt`~~
 
-├── apiserver-kubelet-client.key
+~~`├── apiserver-etcd-client.key`~~
 
+~~`├── apiserver.key`~~
+
+~~`├── apiserver-kubelet-client.crt`~~
+
+~~`├── apiserver-kubelet-client.key`~~
+
+`├── ca.crt`
+
+`├── ca.key`
+
+`├── etcd`
+
+`│├── ca.crt`
+
+`│├── ca.key`
+
+~~`│├── healthcheck-client.crt`~~
+
+~~`│├── healthcheck-client.key`~~
+
+~~`│├── peer.crt`~~
+
+~~`│├── peer.key`~~
+
+~~`│├── server.crt`~~
+
+~~`│└── server.key`~~
+
+~~`├── front-proxy-ca.crt`~~
+
+~~`├── front-proxy-ca.key`~~
+
+~~`├── front-proxy-client.crt`~~
+
+~~`├── front-proxy-client.key`~~
+
+`├── sa.key`
+
+`├── sa.pub`
+
+仅保留根证书和sa相关公钥和私钥。重点说下sa.pub和sa.key，是一对秘钥对，用于加密和解密serviceaccount所携带的请求的，这里千万别进行更新，更新的话，将造成解码失败，假如无意中删除了的话，目前还不清楚如何恢复，还要注意，etcd目录下的根证书与pki下的相同，删除后的树形结构如下:
+
+```
 ├── ca.crt
-
 ├── ca.key
-
 ├── etcd
-
 │├── ca.crt
-
 │├── ca.key
-
-│├── healthcheck-client.crt
-
-│├── healthcheck-client.key
-
-│├── peer.crt
-
-│├── peer.key
-
-│├── server.crt
-
-│└── server.key
-
-├── front-proxy-ca.crt
-
-├── front-proxy-ca.key
-
-├── front-proxy-client.crt
-
-├── front-proxy-client.key
-
 ├── sa.key
-
 ├── sa.pub
-
-仅保留根证书和sa相关公钥和私钥。重点说下sa.pub和sa.key，是一对秘钥对，用于加密和解密serviceaccount所携带的请求的，这里千万别进行更新，更新的话，将造成解码失败，注意:etcd目录下的根证书与pki下的相同，删除后的树形结构:
-
-├── ca.crt
-
-├── ca.key
-
-├── etcd
-
-│├── ca.crt
-
-│├── ca.key
-
-├── sa.key
-
-├── sa.pub
-
-
+```
 
 # **更新证书:**
 
@@ -119,47 +110,33 @@ kubeadm config view&gt; $file.config
 
 我从其他环境找了一个，如果没有其他环境，可以找下自己的安装脚本里，定义kubeadm的配置文件。
 
-配置文件中，重点关注如下两个位置的配置信息，api-advertiseAddress和etcd-dataDir，修改好后，保存到一个文件中，我保存到了kubeadm.config中。
+配置文件中，我此处缺省了很多配置，重点关注如下两个位置的配置信息，api-advertiseAddress和etcd-dataDir，修改好后，保存到一个文件中，我保存到了kubeadm.config中。
 
+```
 api:
-
-  advertiseAddress: 192.9.200.77
-
-  bindPort: 6443
-
-  controlPlaneEndpoint: ""
-
+  advertiseAddress: 192.9.200.77
+  bindPort: 6443
+  controlPlaneEndpoint: ""
 ...
-
 ...
-
 ...
-
 ...
-
 clusterName: kubernetes
-
 etcd:
-
-  local:
-
-    dataDir: /var/lib/etcd
-
-    image: ""
-
+ local:
+  dataDir: /var/lib/etcd
+  image: ""
 ...
-
 ...
-
 ...
-
 ...
+```
+
+
 
 更新秘钥
 
 将所有的需要的证书和密码都进行更新:
-
-
 
 kubeadm alpha phase certs etcd-healthcheck-client --configkubeadm.config
 
@@ -206,6 +183,4 @@ kubeadm alpha phase kubeconfig all --config cluster.yaml
 kubectl get node
 
 kubectl get all --all-namespace
-
-
 
