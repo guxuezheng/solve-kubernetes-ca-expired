@@ -133,27 +133,18 @@ etcd:
 ...
 ```
 
+接下来更新密码和证书，将所有的需要的证书和密码都进行更新:
 
-
-更新秘钥
-
-将所有的需要的证书和密码都进行更新:
-
+```
 kubeadm alpha phase certs etcd-healthcheck-client --configkubeadm.config
-
 kubeadm alpha phase certs etcd-peer --configkubeadm.config
-
 kubeadm alpha phase certs etcd-server --configkubeadm.config
-
 kubeadm alpha phase certs front-proxy-client--cakubeadm.config
-
 kubeadm alpha phase certs front-proxy-client--configkubeadm.config
-
 kubeadm alpha phase certs apiserver-etcd-client --configkubeadm.config
-
 kubeadm alpha phase certs apiserver-kubelet-client --configkubeadm.config
-
 kubeadm alpha phase certs apiserver --configkubeadm.config
+```
 
 此时所有的证书都将重新生成:
 
@@ -167,11 +158,15 @@ kubeadm alpha phase certs apiserver --configkubeadm.config
 
 移除原配置文件
 
-mv /etc/kubernetes/\*conf /etc/kubernetes/conf\_bak/
+```
+mv /etc/kubernetes/*conf /etc/kubernetes/conf_bak/
+```
 
 生成新配置文件:
 
+```
 kubeadm alpha phase kubeconfig all --config cluster.yaml
+```
 
 此时，为保证kubectl命令能正常使用，需要将admin.conf文件替换掉~.kube/config配置文件。
 
@@ -181,7 +176,13 @@ kubeadm alpha phase kubeconfig all --config cluster.yaml
 
 重启后，通过命令校验:
 
+```
 kubectl get node
+```
 
+```
 kubectl get all --all-namespace
+```
+
+
 
