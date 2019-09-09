@@ -4,7 +4,7 @@
 
 公司服务器环境突然无法访问,查看kube-apiserver日志报如下错误,
 
-![](file:///C:\Users\ASUS\AppData\Local\Temp\ksohtml28772\wps1.jpg)
+![](/assets/import.png)
 
 apiserver日志报  
 :context deadline exceeded，此时apiserver容器已经退出,平台中大量管理容器启动异常。
@@ -150,7 +150,7 @@ kubeadm alpha phase certs apiserver --configkubeadm.config
 
 树形结构如下:
 
-![](file:///C:\Users\ASUS\AppData\Local\Temp\ksohtml28772\wps2.jpg)
+![](/assets/impor1t.png)
 
 # **更新配置文件:**
 
