@@ -1,7 +1,4 @@
-  
 记kubernetes证书过期的引发的集群大范围不可用问题,及解决办法
-
-
 
 # **问题:**
 
@@ -9,9 +6,8 @@
 
 ![](file:///C:\Users\ASUS\AppData\Local\Temp\ksohtml28772\wps1.jpg)
 
-apiserver日志报:context deadline exceeded，此时apiserver容器已经退出,平台中大量管理容器启动异常。
-
-
+apiserver日志报  
+:context deadline exceeded，此时apiserver容器已经退出,平台中大量管理容器启动异常。
 
 # **查看证书过期时间:**
 
@@ -19,19 +15,17 @@ apiserver日志报:context deadline exceeded，此时apiserver容器已经退�
 
 \[root@kubemaster manifests\]\# openssl x509 -in /etc/kubernetes/pki/apiserver-etcd-client.crt -noout -dates
 
-notBefore=Sep  7 03:38:14 2018 GMT
+notBefore=Sep  7 03:38:14 2018 GMT
 
-notAfter=Sep  8 03:38:09 2019 GMT
+notAfter=Sep  8 03:38:09 2019 GMT
 
 \[root@kubemaster manifests\]\# openssl x509 -in /etc/kubernetes/pki/ca.crt -noout -dates
 
-notBefore=Sep  7 03:38:12 2018 GMT
+notBefore=Sep  7 03:38:12 2018 GMT
 
-notAfter=Sep  4 03:38:12 2028 GMT
+notAfter=Sep  4 03:38:12 2028 GMT
 
 可以发现除了根证书之外，其他证书的有效期都是一年，根证书的有效期为10年,由于二级证书是由根证书签发，所以我们需要把其他所有过期的证书全部替换掉。
-
-
 
 # **备份数据:**
 
@@ -105,8 +99,6 @@ pki
 
 ├── sa.pub
 
-
-
 # **更新证书:**
 
 由于使用kubeadm构建集群，所有的证书和密码都可以通过kubeadm生成，此处我们也使用kubeadm。
@@ -121,45 +113,31 @@ kubeadm config view&gt; $file.config
 
 配置文件中，重点关注如下两个位置的配置信息，api-advertiseAddress和etcd-dataDir，修改好后，保存到一个文件中，我保存到了kubeadm.config中。
 
+```
 api:
-
-  advertiseAddress: 192.9.200.77
-
-  bindPort: 6443
-
-  controlPlaneEndpoint: ""
-
+  advertiseAddress: 192.9.200.77
+  bindPort: 6443
+  controlPlaneEndpoint: ""
 ...
-
 ...
-
 ...
-
 ...
-
 clusterName: kubernetes
-
 etcd:
-
-  local:
-
-    dataDir: /var/lib/etcd
-
-    image: ""
-
+ local:
+  dataDir: /var/lib/etcd
+  image: ""
 ...
-
 ...
-
 ...
-
 ...
+```
+
+
 
 更新秘钥
 
 将所有的需要的证书和密码都进行更新:
-
-
 
 kubeadm alpha phase certs etcd-healthcheck-client --configkubeadm.config
 
@@ -206,6 +184,4 @@ kubeadm alpha phase kubeconfig all --config cluster.yaml
 kubectl get node
 
 kubectl get all --all-namespace
-
-
 
